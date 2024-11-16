@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:plantlink_mobile_/channel_page.dart';
 import 'package:plantlink_mobile_/profile_page.dart';
+import 'package:plantlink_mobile_/login_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -94,7 +95,8 @@ class _HomePageState extends State<HomePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ChannelPage(),
+                                  //builder: (context) => LoginPage(),
+                                  builder: (context) => ChannelPage()
                                 ),
                               );
                             },
@@ -178,7 +180,7 @@ class NavBar extends StatelessWidget {
                 // Navigate to Profile Page
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ProfilePage()),
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
                 );
               },
             ),

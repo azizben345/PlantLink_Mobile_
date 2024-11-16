@@ -44,7 +44,7 @@ class ChannelPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => DashboardPage(),  // Navigate to DashboardPage
+                    builder: (context) => const DashboardScreen(),  // Navigate to DashboardPage
                   ),
                 );
               },
