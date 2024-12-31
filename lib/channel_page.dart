@@ -1,30 +1,24 @@
+//import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:plantlink_mobile_/channel_card.dart';
-import 'package:plantlink_mobile_/dashboard_page.dart';
+//import 'package:http/http.dart' as http;
+import 'channel_card.dart';
+import 'dashboard_page.dart';
 
-class ChannelPage extends StatelessWidget {
-  ChannelPage({super.key});
+class ChannelPage extends StatefulWidget {
+  const ChannelPage({Key? key}) : super(key: key);
 
-  // Sample list of Channel objects (you would typically fetch this from an API or database)
-  final List<Channel> channels = [
-    Channel(
-      id: '1',
-      name: 'My Channel',
-      description: 'This is a description.',
-      sensorCount: 5,
-      dateCreated: '2024-11-01',
-      dateModified: '2024-11-06',
-    ),
-    Channel(
-      id: '2',
-      name: 'Channel 2',
-      description: 'This is another channel description.',
-      sensorCount: 3,
-      dateCreated: '2024-10-15',
-      dateModified: '2024-11-05',
-    ),
-    // Add more channels as needed
-  ];
+  @override
+  _ChannelPageState createState() => _ChannelPageState();
+}
+
+class _ChannelPageState extends State<ChannelPage> {
+  late Future<List<Channel>> _channels;
+
+  @override
+  void initState() {
+    super.initState();
+    _channels = fetchChannels();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,32 +26,156 @@ class ChannelPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Channel Details'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.builder(
-          itemCount: channels.length,  // The number of items in the list
-          itemBuilder: (context, index) {
-            final channel = channels[index];  // Get the channel from the list
-            return ChannelCard(
-              channel: channel,  // Pass the entire channel object
-              onViewChannel: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const DashboardScreen(),  // Navigate to DashboardPage
-                  ),
+      body: FutureBuilder<List<Channel>>(
+        future: _channels,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
+          } else if (snapshot.hasData) {
+            final channels = snapshot.data!;
+            return ListView.builder(
+              itemCount: channels.length,
+              itemBuilder: (context, index) {
+                final channel = channels[index];
+                return ChannelCard(
+                  channel: channel,
+                  onViewChannel: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DashboardScreen(channelId: channel.id),
+                      ),
+                    );
+                  },
+                  onEditChannel: () {
+                    // Handle edit action
+                  },
+                  onDeleteChannel: () {
+                    // Handle delete action
+                  },
                 );
               },
-              onEditChannel: () {
-                // Handle edit action
-              },
-              onDeleteChannel: () {
-                // Handle delete action
-              },
             );
-          },
-        ),
+          } else {
+            return const Center(child: Text('No channels found.'));
+          }
+        },
       ),
     );
   }
 }
+
+
+// class _ChannelPageState extends State<ChannelPage> {
+//   late Future<List<Channel>> _channels;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _channels = fetchChannels();
+//   }
+
+//   // Function to fetch channels from the backend
+//   Future<List<Channel>> fetchChannels() async {
+//     final prefs = await SharedPreferences.getInstance();
+//     final token = prefs.getString('auth_token');
+
+//     if (token == null) {
+//       Navigator.push(
+//         context,
+//         MaterialPageRoute(
+//           builder: (context) => const LoginPage(),
+//         ),
+//       );
+//     }
+
+//     final response = await http.get(
+//       Uri.parse('http://127.0.0.1:8000/mychannel/'),
+//       headers: {'Authorization': 'Bearer $token'}, // Send token in Authorization header
+//     );
+
+//     if (response.statusCode == 200) {
+//       final List<dynamic> channelData = json.decode(response.body);
+//       return channelData.map((data) => Channel.fromJson(data)).toList();
+//     } else if (response.statusCode == 401) {
+//       // Handle unauthorized error
+//       showDialog(
+//         context: context,
+//         builder: (context) => AlertDialog(
+//           title: const Text('Unauthorized'),
+//           content: const Text('Session expired. Please log in again.'),
+//           actions: [
+//             TextButton(
+//               onPressed: () {
+//                 //Navigator.pop(context);
+//                 Navigator.push(
+//                   context,
+//                   MaterialPageRoute(
+//                     builder: (context) => const LoginPage(),
+//                   ),
+//                 );
+//               },
+//               child: const Text('OK'),
+//             ),
+//           ],
+//         ),
+//       );
+//       throw Exception('Unauthorized: Please log in again');
+//     } else {
+//       throw Exception('Failed to fetch channels');
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('Channel Details'),
+//       ),
+//       body: FutureBuilder<List<Channel>>(
+//         future: _channels,
+//         builder: (context, snapshot) {
+//           if (snapshot.connectionState == ConnectionState.waiting) {
+//             return const Center(child: CircularProgressIndicator());
+//           } else if (snapshot.hasError) {
+//             return Center(
+//               child: Text('Error: ${snapshot.error}'),
+//             );
+//           } else if (snapshot.hasData) {
+//             final channels = snapshot.data!;
+//             return ListView.builder(
+//               itemCount: channels.length,
+//               itemBuilder: (context, index) {
+//                 final channel = channels[index];
+//                 return ChannelCard(
+//                   channel: channel,
+//                   onViewChannel: () {
+//                     Navigator.push(
+//                       context,
+//                       MaterialPageRoute(
+//                         builder: (context) => DashboardScreen(channelId: channel.id),
+//                       ),
+//                     );
+//                   },
+//                   onEditChannel: () {
+//                     // Handle edit action
+//                   },
+//                   onDeleteChannel: () {
+//                     // Handle delete action
+//                   },
+//                 );
+//               },
+//             );
+//           } else {
+//             return const Center(child: Text('No channels found.'));
+//           }
+//         },
+//       ),
+//     );
+//   }
+// }
+

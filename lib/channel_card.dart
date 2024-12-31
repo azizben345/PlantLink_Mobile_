@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+//import 'channel_page.dart';
 
 class ChannelCard extends StatelessWidget {
   final Channel channel; // Use Channel object instead of individual parameters
@@ -47,7 +50,7 @@ class ChannelCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                channel.dateCreated ?? 'N/A',  // Use 'dateCreated' field if present
+                channel.dateCreated,  // Use 'dateCreated' field if present
                 textAlign: TextAlign.center,
               ),
             ),
@@ -57,7 +60,7 @@ class ChannelCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                channel.dateModified ?? 'N/A',  // Use 'dateModified' field if present
+                channel.dateModified,  // Use 'dateModified' field if present
                 textAlign: TextAlign.center,
               ),
             ),
@@ -101,32 +104,51 @@ class ChannelCard extends StatelessWidget {
   }
 }
 
-// Channel model class for data fetching
 class Channel {
   final String id;
   final String name;
   final String description;
   final int sensorCount;
-  final String? dateCreated;
-  final String? dateModified;
+  final String dateCreated;
+  final String dateModified;
 
   Channel({
     required this.id,
     required this.name,
     required this.description,
     required this.sensorCount,
-    this.dateCreated,
-    this.dateModified,
+    required this.dateCreated,
+    required this.dateModified,
   });
 
+  // Factory constructor to create a Channel object from JSON
   factory Channel.fromJson(Map<String, dynamic> json) {
     return Channel(
       id: json['channel_id'],
       name: json['channel_name'],
       description: json['description'],
       sensorCount: json['sensor_count'],
-      dateCreated: json['date_created'],  // Assuming these keys exist
+      dateCreated: json['date_created'],
       dateModified: json['date_modified'],
     );
+  }
+}
+
+// Function to fetch channels from the backend
+Future<List<Channel>> fetchChannels() async {
+  final response = await http.get(
+    Uri.parse('http://127.0.0.1:8000/mychannel/'), // URL to fetch channels
+  );
+
+  if (response.statusCode == 200) {
+    final Map<String, dynamic> jsonData = json.decode(response.body);
+    if (jsonData['success'] == true && jsonData.containsKey('channels')) {
+      final List<dynamic> channelData = jsonData['channels']; // Extract the channels list
+      return channelData.map((data) => Channel.fromJson(data)).toList();
+    } else {
+      throw Exception('No channels found in response');
+    }
+  } else {
+    throw Exception('Failed to fetch channels');
   }
 }

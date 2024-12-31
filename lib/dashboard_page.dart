@@ -2,16 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:plantlink_mobile_/dashboard_functions.dart';
+import 'package:plantlink_mobile_/connect_sensor_page.dart';
+import 'package:plantlink_mobile_/configure_sensor_page.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  
+  final String channelId;
+  const DashboardScreen({super.key, required this.channelId});
+  
+  //const DashboardScreen({super.key});
 
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  late String channelId = widget.channelId;
   // Data lists for each sensor type
   List<double> phData = [];
   List<double> rainfallData = [];
@@ -46,34 +53,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> fetchSensorData() async {
-    final response = await http.get(
-      Uri.parse('http://127.0.0.1:8000/mychannel/672484a397fae572346fda56/get_dashboard_data/')
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8000/mychannel/$channelId/get_dashboard_data/')
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
+        setState(() {
+          // Safely parse data and provide defaults for null or invalid fields
+          phData = List<double>.from(
+            (data['ph_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
+          );
+          rainfallData = List<double>.from(
+            (data['rainfall_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
+          );
+          humidityData = List<double>.from(
+            (data['humid_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
+          );
+          tempData = List<double>.from(
+            (data['temp_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
+          );
+          nitrogenData = List<double>.from(
+            (data['nitrogen_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
+          );
+          phosphorousData = List<double>.from(
+            (data['phosphorous_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
+          );
+          potassiumData = List<double>.from(
+            (data['potassium_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
+          );
+
+          rainfallTimestamps = List<String>.from(data['timestamps'] ?? []);
+          humidTempTimestamps = List<String>.from(data['timestamps_humid_temp'] ?? []);
+          npkTimestamps = List<String>.from(data['timestamps_NPK'] ?? []);
+
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+        debugPrint('Failed to load sensor data. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
       setState(() {
-        // Parse data for each sensor type and timestamp
-        phData = List<double>.from(data['ph_values']?.map((v) => double.parse(v)) ?? []);
-        rainfallData = List<double>.from(data['rainfall_values']?.map((v) => double.parse(v)) ?? []);
-        humidityData = List<double>.from(data['humid_values']?.map((v) => double.parse(v)) ?? []);
-        tempData = List<double>.from(data['temp_values']?.map((v) => double.parse(v)) ?? []);
-        nitrogenData = List<double>.from(data['nitrogen_values']?.map((v) => double.parse(v)) ?? []);
-        phosphorousData = List<double>.from(data['phosphorous_values']?.map((v) => double.parse(v)) ?? []);
-        potassiumData = List<double>.from(data['potassium_values']?.map((v) => double.parse(v)) ?? []);
-
-        rainfallTimestamps = List<String>.from(data['timestamps'] ?? []);
-        humidTempTimestamps = List<String>.from(data['timestamps_humid_temp'] ?? []);
-        npkTimestamps = List<String>.from(data['timestamps_NPK'] ?? []);
-
         isLoading = false;
       });
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-      throw Exception('Failed to load sensor data');
+      debugPrint('Error fetching data: $e');
     }
   }
 
@@ -108,23 +136,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _buildChartSection("Potassium Chart", _generateSpots(potassiumData), npkTimestamps),
 
                   const SizedBox(height: 15),
-                  Row(
-                    children: [
-                      GreenButtonWithIcon(
-                        label: 'Share Channel',
-                        onPressed: () {},
-                      ),
-                      const SizedBox(width: 10),
-                      GreenButtonWithIcon(
-                        label: 'Configure Sensor',
-                        onPressed: () {},
-                      ),
-                      const SizedBox(width: 10),
-                      GreenButtonWithIcon(
-                        label: 'Connect Sensor',
-                        onPressed: () {},
-                      ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        GreenButtonWithIcon(
+                          label: 'Share Channel',
+                          onPressed: () {},
+                        ),
+                        const SizedBox(width: 10),
+                        GreenButtonWithIcon(
+                          label: 'Configure Sensor',
+                          onPressed: () {
+                            Navigator.push(
+                              context, 
+                              MaterialPageRoute(
+                                builder: (context) => ConfigureSensorPage(channelId: channelId)
+                                )
+                              );
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        GreenButtonWithIcon(
+                          label: 'Connect Sensor',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddSensorScreen(channelId: channelId)
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -134,7 +179,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Function to build a chart section with a dropdown to select chart type
   Widget _buildChartSection(String title, List<FlSpot> spots, List<String> timestamps) {
-    if (spots.isEmpty) return const SizedBox(); // Handle case with no data
+    if (spots.isEmpty) {
+      return Column(
+        children: [
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const Text("No data available", style: TextStyle(color: Colors.grey)),
+        ],
+      );
+    }
 
     double minXValue = spots.first.x;
     double maxXValue = spots.last.x;
@@ -142,10 +195,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Determine min and max y values for better y-axis range
     double minYValue = spots.map((spot) => spot.y).reduce((a, b) => a < b ? a : b);
     double maxYValue = spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
-
-    // Get screen width for responsive chart sizing
-    double screenWidth = MediaQuery.of(context).size.width;
-    double chartPadding = 16.0; // Add padding for y-axis labels to display properly
 
     return Column(
       children: [
@@ -174,46 +223,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               maxX: maxXValue,
               minY: minYValue,
               maxY: maxYValue,
-              titlesData: FlTitlesData(
-                leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    interval: 1,
-                    reservedSize: 40,
-                  ),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    interval: 1,
-                    getTitlesWidget: (value, meta) {
-                      int index = value.toInt();
-                      if (index < timestamps.length) {
-                        return Text(
-                          timestamps[index],
-                          style: const TextStyle(fontSize: 10),
-                        );
-                      }
-                      return const Text('');
-                    },
-                  ),
-                ),
-              ),
               lineBarsData: [
                 _getChartData(spots, selectedChartTypes[title].toString()),
               ],
-              borderData: FlBorderData(
-                  show: true,
-                  border: const Border(
-                    left: BorderSide(color: Colors.black),
-                    bottom: BorderSide(color: Colors.black),
-                  ),
-                ),
-                gridData: const FlGridData(
-                  show: true,
-                  drawVerticalLine: true,
-                  horizontalInterval: 10, // Spacing for horizontal grid lines
-                ),
             ),
           ),
         ),
@@ -263,30 +275,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
   }
 
-}
-
-class GreenButtonWithIcon extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
-
-  const GreenButtonWithIcon({super.key, required this.label, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      icon: const Icon(FontAwesomeIcons.fileCirclePlus, color: Colors.white),
-      label: Text(
-        label,
-        style: const TextStyle(color: Colors.white),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green, // Set the background color
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(3),
-        ),
-      ),
-      onPressed: onPressed,
-    );
-  }
 }

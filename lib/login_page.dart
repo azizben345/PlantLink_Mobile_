@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:plantlink_mobile_/channel_page.dart';
+import 'channel_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,6 +16,10 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   String? _errorMessage;
+  bool _isLoading = false;
+
+  // Secure storage instance
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +53,8 @@ class _LoginPageState extends State<LoginPage> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email!';
-                    } else if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value)) {
+                    } else if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                        .hasMatch(value)) {
                       return 'Enter a valid email address!';
                     }
                     return null;
@@ -60,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _passwordController,
                   decoration: const InputDecoration(
                     labelText: 'Password',
-                    hintText: 'At least 8 characters',
+                    //hintText: 'At least 8 characters',
                     border: OutlineInputBorder(),
                   ),
                   obscureText: true,
@@ -78,15 +83,18 @@ class _LoginPageState extends State<LoginPage> {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14.0),
+                      style:
+                          const TextStyle(color: Colors.red, fontSize: 14.0),
                       textAlign: TextAlign.end,
                     ),
                   ),
                 const SizedBox(height: 24.0),
-                ElevatedButton(
-                  onPressed: login,
-                  child: const Text('Sign in'),
-                ),
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: login,
+                        child: const Text('Sign in'),
+                      ),
               ],
             ),
           ),
@@ -95,52 +103,67 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-      // backend validation
-      Future<void> storeToken(String token) async {
-        // Store token using Flutter's secure storage package
-        // Add `flutter_secure_storage` to your pubspec.yaml
-        final storage = FlutterSecureStorage();
-        await storage.write(key: 'auth_token', value: token);
-      }
+  Future<void> storeToken(String token) async {
+    await _secureStorage.write(key: 'auth_token', value: token);
+  }
 
-      Future<void> login() async {
-        if (_formKey.currentState?.validate() ?? false) {
-          final email = _emailController.text.trim();
-          final password = _passwordController.text.trim();
+  Future<void> login() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
 
-          final url = Uri.parse('http://127.0.0.1:8000/login/'); // Update with your actual backend URL
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
 
-          try {
-            final response = await http.post(
-              url,
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({'email': email, 'password': password}),
+      final url = Uri.parse('http://127.0.0.1:8000/api/login/'); // Backend URL
+
+      try {
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'password': password}),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+
+          // Ensure token exists
+          if (data.containsKey('token') && data['token'] != null) {
+            final token = data['token'];
+            await storeToken(token);
+
+            // Navigate to ChannelPage
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ChannelPage()),
             );
-
-            if (response.statusCode == 200) {
-              final data = jsonDecode(response.body);
-              final token = data['token']; // Assume the backend returns a JWT or similar token
-
-              // Store the token securely
-              await storeToken(token);
-
-              // Navigate to the channels page
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => ChannelPage()),
-              );
-            } else {
-              setState(() {
-                _errorMessage = 'Your email or password is incorrect!';
-              });
-            }
-          } catch (error) {
+          } else {
             setState(() {
-              _errorMessage = 'An error occurred. Please try again later.';
+              _errorMessage = 'Invalid server response: Missing token';
             });
           }
+        } else if (response.statusCode == 401) {
+          setState(() {
+            _errorMessage = 'Invalid credentials. Please try again.';
+          });
+        } else {
+          setState(() {
+            _errorMessage = 'Unexpected error: ${response.statusCode}';
+          });
         }
+      } catch (error) {
+        setState(() {
+          _errorMessage = 'Unable to connect to the server. Check your network.';
+        });
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
       }
+    }
+  }
 
   @override
   void dispose() {

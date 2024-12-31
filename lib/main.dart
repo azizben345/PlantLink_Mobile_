@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:plantlink_mobile_/channel_page.dart';
 import 'package:plantlink_mobile_/profile_page.dart';
 import 'package:plantlink_mobile_/login_page.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -91,16 +92,28 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 24.0),
                           ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  //builder: (context) => LoginPage(),
-                                  builder: (context) => ChannelPage()
-                                ),
-                              );
+                            onPressed: () async {
+                              const storage = FlutterSecureStorage();
+                              String? token = await storage.read(key: 'auth_token');
+
+                              if (token != null && token.isNotEmpty) {
+                                // User is logged in
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ChannelPage(),
+                                  ),
+                                );
+                              } else {
+                                // User is not logged in
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LoginPage(),
+                                  ),
+                                );
+                              }
                             },
-                            
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               textStyle: const TextStyle(fontSize: 18),
@@ -168,7 +181,7 @@ class NavBar extends StatelessWidget {
                 // Navigate to My Channel Page
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ChannelPage()),
+                  MaterialPageRoute(builder: (context) => const ChannelPage()),
                 );
               },
             ),
