@@ -73,6 +73,8 @@ def channels(request):
             return JsonResponse({"success": False, "error": "No channels found"}, status=404)
     else:
         return JsonResponse({"success": False, "error": "Error connecting to MongoDB"}, status=500)
+    
+
 
 # def channels(request):
 #     if not request.user_id:  # Validate user_id set by middleware
@@ -725,16 +727,16 @@ def getDashboardData(request, channel_id):
             context = {
                 "channel_id": channel_id,
                 "ph_values": ph_values,
+                "timestamps": timestamps,  # Ensure alignment
                 "rainfall_values": rainfall_values,
-                "timestamps": timestamps,
+                "rainfall_timestamps": rainfall_timestamps,  # Ensure alignment
                 "humid_values": humid_values,
                 "temp_values": temp_values,
-                "timestamps_humid_temp": timestamps_humid_temp,
-                "timestamps_NPK":timestamps_NPK,
-                "rainfall_timestamps":rainfall_timestamps,
-                "nitrogen_values":nitrogen_values,
-                "phosphorous_values":phosphorous_values,
-                "potassium_values":potassium_values,
+                "timestamps_humid_temp": timestamps_humid_temp,  # Ensure alignment
+                "nitrogen_values": nitrogen_values,
+                "phosphorous_values": phosphorous_values,
+                "potassium_values": potassium_values,
+                "timestamps_NPK": timestamps_NPK,  # Ensure alignment
                 "API": API_KEY,
             }
             if humid_values or ph_values or rainfall_values or nitrogen_values or potassium_values or phosphorous_value or temp_values:
@@ -1141,38 +1143,40 @@ def delete_sensor(request, channel_id, sensor_type):
         if channel:
             api_key = channel.get('API_KEY', '')
             if api_key:
-                if sensor_type == "DHT11":
-                    dht_db, dht_collection = connect_to_mongodb('sensor', 'DHT11')
-                    delete_action = dht_collection.find_one({"API_KEY": api_key})
+                # Determine the sensor collection to delete from
+                sensor_collections = {
+                    "DHT11": ('sensor', 'DHT11'),
+                    "NPK": ('sensor', 'NPK'),
+                    "ph_sensor": ('sensor', 'PHSensor'),
+                    "rainfall": ('sensor', 'rainfall')
+                }
+                if sensor_type in sensor_collections:
+                    sensor_db_name, sensor_collection_name = sensor_collections[sensor_type]
+                    sensor_db, sensor_collection = connect_to_mongodb(sensor_db_name, sensor_collection_name)
+                    
+                    delete_action = sensor_collection.find_one({"API_KEY": api_key})
                     if delete_action:
-                        dht_collection.delete_one({"API_KEY": api_key})
+                        # Delete the specific sensor data
+                        sensor_collection.delete_one({"API_KEY": api_key})
+                        
+                        # Check if other sensors are still using the same API_KEY
+                        is_key_used = False
+                        for other_sensor_type, (db_name, collection_name) in sensor_collections.items():
+                            other_db, other_collection = connect_to_mongodb(db_name, collection_name)
+                            if other_collection.find_one({"API_KEY": api_key}):
+                                is_key_used = True
+                                break
+                        
+                        # If no other sensors are using the API_KEY, clear it
+                        if not is_key_used:
+                            collection.update_one(
+                                {'_id': _id},
+                                {'$set': {'API_KEY': ''}}
+                            )
+                        
                         return redirect('view_channel_sensor', channel_id=channel_id)
                     else:
-                        return JsonResponse({"success": False, "error": "DHT11 sensor document not found."}, status=404)
-                elif sensor_type == "NPK":
-                    NPK_db, NPK_collection = connect_to_mongodb('sensor', 'NPK')
-                    delete_action = NPK_collection.find_one({"API_KEY": api_key})
-                    if delete_action:
-                        NPK_collection.delete_one({"API_KEY": api_key})
-                        return redirect('view_channel_sensor', channel_id=channel_id)
-                    else:
-                        return JsonResponse({"success": False, "error": "NPKSensor document not found."}, status=404)
-                elif sensor_type == "ph_sensor":
-                    ph_db, ph_collection = connect_to_mongodb('sensor', 'PHSensor')
-                    delete_action = ph_collection.find_one({"API_KEY": api_key})
-                    if delete_action:
-                        ph_collection.delete_one({"API_KEY": api_key})
-                        return redirect('view_channel_sensor', channel_id=channel_id)
-                    else:
-                        return JsonResponse({"success": False, "error": "PHSensor document not found."}, status=404)
-                elif sensor_type == "rainfall":
-                    rainfall_db, rainfall_collection = connect_to_mongodb('sensor', 'rainfall')
-                    delete_action = rainfall_collection.find_one({"API_KEY": api_key})
-                    if delete_action:
-                        rainfall_collection.delete_one({"API_KEY": api_key})
-                        return redirect('view_channel_sensor', channel_id=channel_id)
-                    else:
-                        return JsonResponse({"success": False, "error": "rainfall document not found."}, status=404)
+                        return JsonResponse({"success": False, "error": f"{sensor_type} sensor document not found."}, status=404)
                 else:
                     return JsonResponse({"success": False, "error": "Invalid sensor type."}, status=400)
             else:
@@ -1181,6 +1185,57 @@ def delete_sensor(request, channel_id, sensor_type):
             return JsonResponse({"success": False, "error": "Channel document not found."}, status=404)
     else:
         return JsonResponse({"error": "Database connection error"}, status=500)
+
+# @csrf_exempt
+# def delete_sensor(request, channel_id, sensor_type):
+#     _id = ObjectId(channel_id)
+#     db, collection = connect_to_mongodb('Channel', 'dashboard')
+#     print(sensor_type)
+#     if db is not None and collection is not None:
+#         channel = collection.find_one({'_id': _id})
+#         if channel:
+#             api_key = channel.get('API_KEY', '')
+#             if api_key:
+#                 if sensor_type == "DHT11":
+#                     dht_db, dht_collection = connect_to_mongodb('sensor', 'DHT11')
+#                     delete_action = dht_collection.find_one({"API_KEY": api_key})
+#                     if delete_action:
+#                         dht_collection.delete_one({"API_KEY": api_key})
+#                         return redirect('view_channel_sensor', channel_id=channel_id)
+#                     else:
+#                         return JsonResponse({"success": False, "error": "DHT11 sensor document not found."}, status=404)
+#                 elif sensor_type == "NPK":
+#                     NPK_db, NPK_collection = connect_to_mongodb('sensor', 'NPK')
+#                     delete_action = NPK_collection.find_one({"API_KEY": api_key})
+#                     if delete_action:
+#                         NPK_collection.delete_one({"API_KEY": api_key})
+#                         return redirect('view_channel_sensor', channel_id=channel_id)
+#                     else:
+#                         return JsonResponse({"success": False, "error": "NPKSensor document not found."}, status=404)
+#                 elif sensor_type == "ph_sensor":
+#                     ph_db, ph_collection = connect_to_mongodb('sensor', 'PHSensor')
+#                     delete_action = ph_collection.find_one({"API_KEY": api_key})
+#                     if delete_action:
+#                         ph_collection.delete_one({"API_KEY": api_key})
+#                         return redirect('view_channel_sensor', channel_id=channel_id)
+#                     else:
+#                         return JsonResponse({"success": False, "error": "PHSensor document not found."}, status=404)
+#                 elif sensor_type == "rainfall":
+#                     rainfall_db, rainfall_collection = connect_to_mongodb('sensor', 'rainfall')
+#                     delete_action = rainfall_collection.find_one({"API_KEY": api_key})
+#                     if delete_action:
+#                         rainfall_collection.delete_one({"API_KEY": api_key})
+#                         return redirect('view_channel_sensor', channel_id=channel_id)
+#                     else:
+#                         return JsonResponse({"success": False, "error": "rainfall document not found."}, status=404)
+#                 else:
+#                     return JsonResponse({"success": False, "error": "Invalid sensor type."}, status=400)
+#             else:
+#                 return JsonResponse({"success": False, "error": "API_KEY not set for this channel."}, status=400)
+#         else:
+#             return JsonResponse({"success": False, "error": "Channel document not found."}, status=404)
+#     else:
+#         return JsonResponse({"error": "Database connection error"}, status=500)
 
 # EDIT SENSOR - DONE (changed)
 @csrf_exempt
