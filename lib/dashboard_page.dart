@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:plantlink_mobile_/dashboard_functions.dart';
 import 'package:plantlink_mobile_/connect_sensor_page.dart';
 import 'package:plantlink_mobile_/configure_sensor_page.dart';
+//import 'package:plantlink_mobile_/channel_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   
@@ -29,6 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<double> potassiumData = [];
 
   // Timestamps for each sensor type
+  List<String> phTimestamps = [];
   List<String> rainfallTimestamps = [];
   List<String> humidTempTimestamps = [];
   List<String> npkTimestamps = [];
@@ -85,7 +88,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             (data['potassium_values'] as List?)?.map((v) => double.tryParse(v.toString()) ?? 0.0) ?? []
           );
 
-          rainfallTimestamps = List<String>.from(data['timestamps'] ?? []);
+          phTimestamps = List<String>.from(data['timestamps'] ?? []);
+          rainfallTimestamps = List<String>.from(data['rainfall_timestamps'] ?? []);
           humidTempTimestamps = List<String>.from(data['timestamps_humid_temp'] ?? []);
           npkTimestamps = List<String>.from(data['timestamps_NPK'] ?? []);
 
@@ -111,127 +115,206 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return FlSpot(index.toDouble(), data[index]);
     });
   }
+  // Override the back button behavior
+  Future<bool> _onWillPop() async {
+    // Navigate to  any other page when the back button is pressed
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const ViewChannel()), //ChannelPage()),
+    );
+    return Future.value(false); // Prevent the default pop action
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Dashboard")),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildChartSection("pH Level Chart", _generateSpots(phData), []),
-                  const SizedBox(height: 20),
-                  _buildChartSection("Rainfall Chart", _generateSpots(rainfallData), rainfallTimestamps),
-                  const SizedBox(height: 20),
-                  _buildChartSection("Humidity Chart", _generateSpots(humidityData), humidTempTimestamps),
-                  const SizedBox(height: 20),
-                  _buildChartSection("Temperature Chart", _generateSpots(tempData), humidTempTimestamps),
-                  const SizedBox(height: 20),
-                  _buildChartSection("Nitrogen Chart", _generateSpots(nitrogenData), npkTimestamps),
-                  const SizedBox(height: 20),
-                  _buildChartSection("Phosphorous Chart", _generateSpots(phosphorousData), npkTimestamps),
-                  const SizedBox(height: 20),
-                  _buildChartSection("Potassium Chart", _generateSpots(potassiumData), npkTimestamps),
-
-                  const SizedBox(height: 15),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        GreenButtonWithIcon(
-                          label: 'Share Channel',
-                          onPressed: () {},
-                        ),
-                        const SizedBox(width: 10),
-                        GreenButtonWithIcon(
-                          label: 'Configure Sensor',
-                          onPressed: () {
-                            Navigator.push(
-                              context, 
-                              MaterialPageRoute(
-                                builder: (context) => ConfigureSensorPage(channelId: channelId)
-                                )
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(title: const Text("Dashboard")),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildChartSection("pH Level Chart", _generateSpots(phData), phTimestamps),
+                    const SizedBox(height: 20),
+                    _buildChartSection("Rainfall Chart", _generateSpots(rainfallData), rainfallTimestamps),
+                    const SizedBox(height: 20),
+                    _buildChartSection("Humidity Chart", _generateSpots(humidityData), humidTempTimestamps),
+                    const SizedBox(height: 20),
+                    _buildChartSection("Temperature Chart", _generateSpots(tempData), humidTempTimestamps),
+                    const SizedBox(height: 20),
+                    _buildChartSection("Nitrogen Chart", _generateSpots(nitrogenData), npkTimestamps),
+                    const SizedBox(height: 20),
+                    _buildChartSection("Phosphorous Chart", _generateSpots(phosphorousData), npkTimestamps),
+                    const SizedBox(height: 20),
+                    _buildChartSection("Potassium Chart", _generateSpots(potassiumData), npkTimestamps),
+      
+                    const SizedBox(height: 15),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          const SizedBox(width: 10),
+                          GreenButtonWithIcon(
+                            label: 'Configure Sensor',
+                            onPressed: () {
+                              Navigator.push(
+                                context, 
+                                MaterialPageRoute(
+                                  builder: (context) => ConfigureSensorPage(channelId: channelId)
+                                  )
+                                );
+                            },
+                          ),
+                          const SizedBox(width: 10),
+                          GreenButtonWithIcon(
+                            label: 'Connect Sensor',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddSensorScreen(channelId: channelId)
+                                ),
                               );
-                          },
-                        ),
-                        const SizedBox(width: 10),
-                        GreenButtonWithIcon(
-                          label: 'Connect Sensor',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AddSensorScreen(channelId: channelId)
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
-  // Function to build a chart section with a dropdown to select chart type
-  Widget _buildChartSection(String title, List<FlSpot> spots, List<String> timestamps) {
-    if (spots.isEmpty) {
-      return Column(
-        children: [
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          const Text("No data available", style: TextStyle(color: Colors.grey)),
-        ],
-      );
-    }
+Widget _buildChartSection(String title, List<FlSpot> spots, List<String> timestamps) {
+  String chartDataType = "";
+  if (title == "pH Level Chart") { chartDataType = "phChart"; }
+  else if (title == "Rainfall Chart") { chartDataType = "rainfallChart"; }
+  else if (title == "Humidity Chart") { chartDataType = "humidityChart"; }
+  else if (title == "Temperature Chart") { chartDataType = "temperatureChart"; }
+  else if (title == "Nitrogen Chart") { chartDataType = "nitrogenChart"; }
+  else if (title == "Phosphorous Chart") { chartDataType = "phosphorousChart"; }
+  else if (title == "Potassium Chart") { chartDataType = "potassiumChart"; }
 
-    double minXValue = spots.first.x;
-    double maxXValue = spots.last.x;
-
-    // Determine min and max y values for better y-axis range
-    double minYValue = spots.map((spot) => spot.y).reduce((a, b) => a < b ? a : b);
-    double maxYValue = spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
-
+  if (spots.isEmpty) {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title),
-            DropdownButton<String>(
-              value: selectedChartTypes[title],
-              items: ["Spline Chart", "Line Chart", "Bar Chart"]
-                  .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedChartTypes[title] = value!;
-                });
-              },
-            ),
-          ],
-        ),
-        SizedBox(
-          height: 300,
-          child: LineChart(
-            LineChartData(
-              minX: minXValue,
-              maxX: maxXValue,
-              minY: minYValue,
-              maxY: maxYValue,
-              lineBarsData: [
-                _getChartData(spots, selectedChartTypes[title].toString()),
-              ],
-            ),
-          ),
-        ),
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        const Text("No data available", style: TextStyle(color: Colors.grey)),
       ],
     );
   }
+
+  double minXValue = spots.first.x;
+  double maxXValue = spots.last.x;
+  double minYValue = spots.map((spot) => spot.y).reduce((a, b) => a < b ? a : b);
+  double maxYValue = spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
+
+  return Column(
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title),
+          DropdownButton<String>(
+            value: selectedChartTypes[title],
+            items: ["Spline Chart", "Line Chart", "Bar Chart"]
+                .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                selectedChartTypes[title] = value!;
+              });
+            },
+          ),
+        ],
+      ),
+      SizedBox(
+        height: 300,
+        child: selectedChartTypes[title] == "Bar Chart"
+            ? BarChart(
+                BarChartData(
+                  //minX: minXValue,
+                  //maxX: maxXValue,
+                  minY: minYValue,
+                  maxY: maxYValue,
+                  barGroups: _getBarChartData(spots),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          int index = value.toInt();
+                          if (index >= 0 && index < timestamps.length) {
+                            return Text(
+                              timestamps[index],
+                              style: const TextStyle(fontSize: 10),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : LineChart(
+                LineChartData(
+                  minX: minXValue,
+                  maxX: maxXValue,
+                  minY: minYValue,
+                  maxY: maxYValue,
+                  lineBarsData: [
+                    _getChartData(spots, selectedChartTypes[title].toString()),
+                  ],
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          int index = value.toInt();
+                          if (index >= 0 && index < timestamps.length) {
+                            return Text(
+                              timestamps[index],
+                              style: const TextStyle(fontSize: 10),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+      ),
+      const SizedBox(height: 10),
+      TextButton.icon(
+        onPressed: () async {
+          if (timestamps.isEmpty) {
+            _showErrorDialog("Timestamps are required to share the chart.");
+            return;
+          }
+
+          String startDate = timestamps.first;
+          String endDate = timestamps.last;
+          String chartType = selectedChartTypes[title] ?? "Spline Chart";
+
+          await shareChart(title, spots, chartDataType, startDate, endDate, chartType);
+        },
+        icon: const Icon(Icons.share),
+        label: const Text("Share Chart"),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.green,
+        ),
+      ),
+    ],
+  );
+}
 
   LineChartBarData _getChartData(List<FlSpot> spots, String chartType) {
     switch (chartType) {
@@ -275,4 +358,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
   }
 
+  Future<void> shareChart(String chartTitle, List<FlSpot> spots, String chartDataType, String startDate, String endDate, String chartType) async {
+  
+  final DateTime startDateObj = DateFormat("dd-MM-yyyy").parse(startDate);
+  final DateTime endDateObj = DateFormat("dd-MM-yyyy").parse(endDate);
+  final String formattedStartDate = DateFormat("yyyy-MM-dd").format(startDateObj);
+  final String formattedEndDate = DateFormat("yyyy-MM-dd").format(endDateObj);
+
+  final url = 'http://10.0.2.2:8000/mychannel/$channelId/share_chart/$chartDataType/$formattedStartDate/$formattedEndDate/$chartTitle/';
+  
+  final payload = {
+  "data_points": spots.map((spot) => {"x": spot.x, "y": spot.y}).toList(),
+  };
+
+
+  try {
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+    if (responseData["success"] != null) {  // Changed this condition
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Chart Shared"),
+            content: Text(responseData["success"]),  // Show the actual success message
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+    _showErrorDialog("Failed to share the chart.");
+  }
+    } else {
+      _showErrorDialog("Error: ${response.statusCode}");
+    }
+  } catch (e) {
+    debugPrint('Error sharing chart: $e');
+    _showErrorDialog("An unexpected error occurred.");
+  }
+}
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Error"),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

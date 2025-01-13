@@ -82,21 +82,43 @@ class AddSensorScreen extends StatelessWidget {
     );
 
     if (response.statusCode == 200 || response.statusCode == 302) {
-      final responseData = json.decode(response.body);
-      if (responseData['success'] == true || response.reasonPhrase?.compareTo("Found") == 0) {
+      if (response.statusCode == 302) {
+        // Handle redirect without parsing response body
         _showSnackbar(context, "Sensor connected successfully!");
         Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DashboardScreen(channelId: channelId),
-                        ),
-                      ); // Close the modal
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardScreen(channelId: channelId),
+          ),
+        );
       } else {
-        _showSnackbar(context, "Failed to connect sensor.");
+        try {
+          if (response.body.isNotEmpty) {
+            final responseData = json.decode(response.body);
+
+            if (responseData['success'] == true) {
+              _showSnackbar(context, "Sensor connected successfully!");
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DashboardScreen(channelId: channelId),
+                ),
+              );
+            } else {
+              _showSnackbar(context, "Failed to connect sensor.");
+            }
+          } else {
+            _showSnackbar(context, "Error: Empty response body.");
+          }
+        } catch (e) {
+          _showSnackbar(context, "Error parsing response: $e");
+        }
       }
     } else {
       _showSnackbar(context, "Error: ${response.reasonPhrase}");
     }
+
+
   }
 
   void _showSnackbar(BuildContext context, String message) {

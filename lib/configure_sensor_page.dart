@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 //import 'manage_sensor_page.dart';
 import 'sensor_service.dart';
-import 'dashboard_page.dart';
+import 'dashboard_page.dart'; 
 
 class ConfigureSensorPage extends StatefulWidget {
   final String channelId;
@@ -103,6 +103,7 @@ class _ConfigureSensorPageState extends State<ConfigureSensorPage> {
                     channelId: widget.channelId,
                     sensorType: sensorType,
                   );
+                  if (!mounted) return;
                   setState(() {
                     _sensorData = SensorService().fetchSensors(widget.channelId);
                   });
@@ -118,6 +119,7 @@ class _ConfigureSensorPageState extends State<ConfigureSensorPage> {
                     const SnackBar(content: Text('Sensor deleted successfully')),
                   );
                 } catch (e) {
+                  if (!mounted) return;
                   print('Error deleting sensor: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Failed to delete sensor')),

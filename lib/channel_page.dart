@@ -1,7 +1,6 @@
-//import 'dart:convert';
 import 'package:flutter/material.dart';
-//import 'package:http/http.dart' as http;
 import 'channel_card.dart';
+import 'manage_sensors.dart';
 import 'dashboard_page.dart';
 
 class ChannelPage extends StatefulWidget {
@@ -25,6 +24,32 @@ class _ChannelPageState extends State<ChannelPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Channel Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.manage_accounts),
+            onPressed: () async {
+              try {
+                final channels = await _channels; // Wait for channels to load
+                if (channels.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ManageSensorsPage(),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No channels to manage sensors.')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error loading channels: $e')),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<List<Channel>>(
         future: _channels,
@@ -52,10 +77,12 @@ class _ChannelPageState extends State<ChannelPage> {
                     );
                   },
                   onEditChannel: () {
-                    // Handle edit action
+                    // Placeholder for edit action
+                    print('Edit channel: ${channel.name}');
                   },
                   onDeleteChannel: () {
-                    // Handle delete action
+                    // Placeholder for delete action
+                    print('Delete channel: ${channel.name}');
                   },
                 );
               },
@@ -68,7 +95,6 @@ class _ChannelPageState extends State<ChannelPage> {
     );
   }
 }
-
 
 // class _ChannelPageState extends State<ChannelPage> {
 //   late Future<List<Channel>> _channels;
