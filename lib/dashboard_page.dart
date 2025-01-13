@@ -6,7 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:plantlink_mobile_/dashboard_functions.dart';
 import 'package:plantlink_mobile_/connect_sensor_page.dart';
 import 'package:plantlink_mobile_/configure_sensor_page.dart';
-//import 'package:plantlink_mobile_/channel_page.dart';
+import 'package:plantlink_mobile_/channel_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   
@@ -120,7 +120,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Navigate to  any other page when the back button is pressed
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const ViewChannel()), //ChannelPage()),
+      MaterialPageRoute(builder: (context) => const ChannelPage()),
     );
     return Future.value(false); // Prevent the default pop action
   }
