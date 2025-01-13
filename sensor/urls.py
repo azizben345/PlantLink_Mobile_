@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 urlpatterns = [
+    path('', views.sensors, name='sensors'),
+    
     path('ph_sensor/', views.post_ph_sensor_data, name='post_ph_sensor_data'),
     path('ph_sensor_data/', views.post_ph_data, name='post_ph_data'),
 

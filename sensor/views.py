@@ -5,8 +5,70 @@ from django.conf import settings
 import json
 from datetime import datetime
 from pymongo import MongoClient
+from bson import ObjectId
 
 from main.mongo_setup import connect_to_mongodb         #TO CONNECT TO MONGODB AND GET DB AND COLLECTION
+
+# VIEW ALL SENSOR - in development
+def sensors(request):
+    # Define the list of sensor types to fetch data for
+    sensors = [
+        {"name": "DHT11", "db_name": "DHT11"},
+        {"name": "NPK", "db_name": "NPK"},
+        {"name": "PHSensor", "db_name": "PHSensor"},
+        {"name": "Rainfall", "db_name": "rainfall"}
+    ]
+
+    sensor_list = []
+    sensor_counts = {sensor["name"]: 0 for sensor in sensors}  # Initialize counts for each sensor type
+    total_sensors = 0  # Initialize total sensor count
+
+    # Fetch all channels and store them in memory for quick lookup
+    channel_db, channel_collection = connect_to_mongodb('Channel', 'dashboard')
+    channels = list(channel_collection.find()) if channel_db is not None and channel_collection is not None else []
+
+    # Fetch data from each sensor collection
+    for sensor in sensors:
+        sensor_db, sensor_collection = connect_to_mongodb('sensor', sensor['db_name'])
+        if sensor_db is not None and sensor_collection is not None:
+            # Fetch all sensor data (ignoring API key and channel data)
+            sensor_data = sensor_collection.find()
+            for data in sensor_data:
+                # Increment the count for the current sensor type
+                sensor_counts[sensor["name"]] += 1
+                total_sensors += 1
+
+                # Initialize a list to store matching channels
+                matching_channels = []
+
+                # Get the sensor's API key
+                sensor_api_key = data.get('API_KEY')
+
+                # Find all channels with matching API keys
+                for channel in channels:
+                    if channel.get('API_KEY') == sensor_api_key:
+                        matching_channels.append({
+                            "channel_id": str(channel.get('_id')),
+                            "channel_name": channel.get('channel_name', 'Unknown')
+                        })
+
+                # Append the sensor data with matching channel information
+                sensor_list.append({
+                    "sensor_id": str(data.get('_id')),
+                    "API_KEY": sensor_api_key,
+                    "sensor_name": data.get('sensor_name'),
+                    "sensor_type": data.get('sensor_type'),
+                    "sensor_data_count": len(data.get('sensor_data', [])),
+                    "matching_channels": matching_channels,  # List of channels matching the API key
+                })
+
+    # Return the collected sensor data along with counts
+    return JsonResponse({
+        "sensors": sensor_list,
+        "sensor_counts": sensor_counts,  # Count of each sensor type
+        "total_sensors": total_sensors  # Total count of sensors
+    })
+
 
 # Create your views here.
 @csrf_exempt
