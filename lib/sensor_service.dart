@@ -9,7 +9,7 @@ class SensorService {
     final url = Uri.parse('$baseUrl/mychannel/$channelId/manage_sensor');
 
     try {
-      final response = await http.get(url);
+      final response = await http.get(url); 
 
       if (response.statusCode == 200) {
         // Parse the JSON response
@@ -23,29 +23,37 @@ class SensorService {
     }
   }
 
-  // Edit a sensor
   Future<void> editSensor({
-    required String channelId,
-    required String sensorType,
-    required String sensorId,
-    required String newSensorName,
-    required String apiKey,
-  }) async {
-    final url = Uri.parse('$baseUrl/mychannel/$channelId/edit_sensor/$sensorType/$sensorId/');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'sensorName': newSensorName,
-        'sensorType': sensorType,
-        'ApiKey': apiKey,
-      }),
-    );
+  required String channelId,
+  required String sensorType,
+  required String sensorId,
+  required String newSensorName,
+  required String apiKey,
+}) async {
+  final url = Uri.parse('$baseUrl/mychannel/$channelId/edit_sensor/$sensorType/$sensorId/');
+  final requestBody = json.encode({
+    'sensorName': newSensorName,
+    'sensorType': sensorType,
+    'ApiKey': apiKey,
+  });
 
-    if (response.statusCode != 302) {
-      throw Exception('Failed to edit sensor');
-    }
+  print('Edit Sensor Request URL: $url');
+  print('Edit Sensor Request Body: $requestBody');
+
+  final response = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: requestBody,
+  );
+
+  print('Edit Sensor Response Status: ${response.statusCode}');
+  print('Edit Sensor Response Body: ${response.body}');
+
+  if (response.statusCode != 200) { // Adjust based on backend's success status code
+    throw Exception('Failed to edit sensor');
   }
+}
+
 
   // Delete a sensor
   Future<void> deleteSensor({
@@ -60,4 +68,19 @@ class SensorService {
     }
   }
 
+ // Unset a sensor
+  Future<void> unsetSensor(String channelId) async {
+    final url = Uri.parse('$baseUrl/mychannel/$channelId/unset_sensor');
+
+    try {
+      final response = await http.post(url);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to unset sensor. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error unsetting sensor: $e');
+    }
+  }
 }
+

@@ -135,87 +135,121 @@ class _ConfigureSensorPageState extends State<ConfigureSensorPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Configure Sensors'),
-      ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _sensorData,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!['sensors'].isEmpty) {
-            return const Center(child: Text('No sensors found.'));
-          } else {
-            final apiKey = snapshot.data!['API_KEY_VALUE'];
-            final sensors = snapshot.data!['sensors'];
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Configure Sensors'),
+    ),
+    body: FutureBuilder<Map<String, dynamic>>(
+      future: _sensorData,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!['sensors'].isEmpty) {
+          return const Center(child: Text('No sensors found.'));
+        } else {
+          final apiKey = snapshot.data!['API_KEY_VALUE'];
+          final sensors = snapshot.data!['sensors'];
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Display API Key
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'API Key: $apiKey',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Display API Key
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'API Key: $apiKey',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                const Divider(),
+              ),
+              const Divider(),
 
-                // Display Sensor List
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: sensors.length,
-                    itemBuilder: (context, index) {
-                      final sensor = sensors[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        child: ListTile(
-                          title: Text( (sensor['sensor_name'] != null)
-                              ? sensor['sensor_name']
-                              : 'Unnamed Sensor'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Type: ${sensor['sensor_type']}'),
-                              Text('Data Count: ${sensor['sensor_data_count']}'),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _editSensorName(
-                                  sensor['sensor_id'],
-                                  sensor['sensor_name'],
-                                  sensor['sensor_type'],
-                                  apiKey,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteSensor(
-                                  sensor['sensor_id'], 
-                                  sensor['sensor_type']
-                                ),
-                              ),
-                            ],
-                          ),
+              // Unset Sensor Button
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await SensorService().unsetSensor(widget.channelId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Sensor unset successfully')),
+                      );
+                      // Navigate to DashboardScreen
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DashboardScreen(channelId: widget.channelId),
                         ),
                       );
-                    },
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to unset sensor: $e')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.warning, color: Colors.white),
+                  label: const Text('Unset Sensor'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
                   ),
                 ),
-              ],
-            );
-          }
-        },
-      ),
-    );
-  }
+              ),
+              const Divider(),
+
+              // Display Sensor List
+              Expanded(
+                child: ListView.builder(
+                  itemCount: sensors.length,
+                  itemBuilder: (context, index) {
+                    final sensor = sensors[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: ListTile(
+                        title: Text(
+                          (sensor['sensor_name'] != null)
+                              ? sensor['sensor_name']
+                              : 'Unnamed Sensor',
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Type: ${sensor['sensor_type']}'),
+                            Text('Data Count: ${sensor['sensor_data_count']}'),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _editSensorName(
+                                sensor['sensor_id'],
+                                sensor['sensor_name'],
+                                sensor['sensor_type'],
+                                apiKey,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteSensor(
+                                sensor['sensor_id'],
+                                sensor['sensor_type'],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        }
+      },
+    ),
+  );
+}
 }

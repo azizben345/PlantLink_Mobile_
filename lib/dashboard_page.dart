@@ -125,12 +125,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Future.value(false); // Prevent the default pop action
   }
 
-  @override
+   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        appBar: AppBar(title: const Text("Dashboard")),
+        appBar: AppBar(
+          title: const Text("Dashboard"),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: fetchSensorData, // Refresh page button
+            ),
+          ],
+        ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
