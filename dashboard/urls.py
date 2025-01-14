@@ -54,5 +54,6 @@ urlpatterns = [
 
     path('<str:channel_id>/edit_sensor/<str:sensor_type>/<str:sensor_id>/', views.edit_sensor, name="edit_sensor"),
     path('<str:channel_id>/add_sensor', views.add_sensor, name="add_sensor"),
+    path('<str:channel_id>/unset_sensor', views.unset_sensor, name="unset_sensor"),
     path('<str:channel_id>/delete_sensor/<str:sensor_type>/', views.delete_sensor, name="delete_sensor"),
 ]
